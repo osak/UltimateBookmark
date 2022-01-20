@@ -1,0 +1,8 @@
+.aws-sam
+.idea
+docker
+events
+*.iml
+**/build
+**/.gradle
+samconfig.toml
