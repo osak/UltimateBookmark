@@ -5,27 +5,24 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import ultimate_bookmark.dynamo.DynamoDbSelector
-import ultimate_bookmark.dynamo.toDynamoEnv
 import ultimate_bookmark.handler.CreateBookmarkHandler
-import ultimate_bookmark.handler.CreateBookmarkRequest
+import ultimate_bookmark.handler.ListBookmarkHandler
+import ultimate_bookmark.router.Route
+import ultimate_bookmark.router.Router
 
 class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private val dynamoDbSelector = DynamoDbSelector()
     private val objectMapper = ObjectMapper().registerKotlinModule()
+    private val router = Router()
+
+    init {
+        router.addRoute(Route(Route.HttpMethod.POST, Regex("/bookmark"), CreateBookmarkHandler(dynamoDbSelector)))
+        router.addRoute(Route(Route.HttpMethod.GET, Regex("/bookmark"), ListBookmarkHandler(dynamoDbSelector)))
+    }
 
     override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
-        val ddb = dynamoDbSelector.get(input.requestContext.stage.toDynamoEnv())
-        val client = DynamoDbEnhancedClient.builder()
-            .dynamoDbClient(ddb)
-            .build()
-        val createBookmarkHandler = CreateBookmarkHandler(client)
-        val request = objectMapper.readValue<CreateBookmarkRequest>(input.body)
-        val response = createBookmarkHandler.handle(request, context)
-
         val headers = mapOf(
             "Content-Type" to "application/json",
             "X-Custom-Header" to "application/json",
@@ -33,6 +30,6 @@ class App : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseE
 
         return APIGatewayProxyResponseEvent()
             .withHeaders(headers)
-            .withBody(objectMapper.writeValueAsString(response))
+            .withBody(objectMapper.writeValueAsString(router.handleRequest(input, context)))
     }
 }

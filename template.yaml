@@ -54,6 +54,11 @@ Resources:
           Properties:
             Path: /bookmark
             Method: post
+        ListBookmark:
+          Type: Api
+          Properties:
+            Path: /bookmark
+            Method: get
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

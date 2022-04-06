@@ -1,18 +1,28 @@
 package ultimate_bookmark.handler
 
 import com.amazonaws.services.lambda.runtime.Context
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import software.amazon.awssdk.enhanced.dynamodb.Expression
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import ultimate_bookmark.dynamo.Bookmark
+import ultimate_bookmark.dynamo.DynamoDbSelector
+import ultimate_bookmark.dynamo.toDynamoEnv
+import ultimate_bookmark.router.RouteHandler
 import java.util.UUID
 
 class CreateBookmarkHandler(
-    private val dynamoDbClient: DynamoDbEnhancedClient,
-) {
-    private val table = dynamoDbClient.table("Bookmarks", TableSchema.fromImmutableClass(Bookmark::class.java))
+    private val dynamoDbSelector: DynamoDbSelector
+) : RouteHandler<CreateBookmarkResponse> {
+    private val objectMapper = ObjectMapper().registerKotlinModule()
 
-    fun handle(request: CreateBookmarkRequest, context: Context): CreateBookmarkResponse {
+    override fun handle(apiRequestEvent: APIGatewayProxyRequestEvent, context: Context): CreateBookmarkResponse {
+        val request = objectMapper.readValue<CreateBookmarkRequest>(apiRequestEvent.body)
+        val table = dynamoDbSelector.getEnhanced(apiRequestEvent.requestContext.stage.toDynamoEnv())
+            .table("Bookmarks", TableSchema.fromImmutableClass(Bookmark::class.java))
+
         val bookmark = Bookmark(
             id = UUID.randomUUID(),
             title = request.title,

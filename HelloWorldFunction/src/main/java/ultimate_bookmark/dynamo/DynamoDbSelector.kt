@@ -2,6 +2,7 @@ package ultimate_bookmark.dynamo
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import java.net.URI
@@ -36,6 +37,12 @@ class DynamoDbSelector {
 
             return cache[env]!!
         }
+    }
+
+    fun getEnhanced(env: Env): DynamoDbEnhancedClient {
+        return DynamoDbEnhancedClient.builder()
+            .dynamoDbClient(get(env))
+            .build()
     }
 
     enum class Env {
